@@ -1,0 +1,42 @@
+Default.json
+This is the file where default values will be picked from. This has cisuffix values,  domainnames for Client facing, out of region,primary region and secondary region, geo location countryout of region, route53hostedzone name etc
+
+Ci.json
+This flie has cisuffix values,  domainnames for Client facing, out of region,primary region and secondary region
+
+Vgi-retail-xxx
+These json files has gatekeepetoggleURL defined in them every file differentiated by env and feature id  parameter for example env=SAT is for test, env=dev is for engineer emvironment and prod has its own url 
+
+Tag folder
+This folder contains tag vaules for  only ci file
+
+Template-us-east1
+Line 46-55---If this is not a CI build then the function equals to Cisuffix then initiates(i.e deploys/uses) below resources
+
+Line 56-65---1. out-of-regionfailover resource with type as custom RT53healthtogglelookup which has properties as halthcheckname( here healthcheck name is passed), service token(this is got from the lambda server on the current region, current aws account id,and function used here are RT53HClookupCR)
+
+Line 66-77---2. PrimaryRegion healthcheck resouce with type as custom RT53healthtogglelookup which has properties if the the condition is not a part of CI build then use health checkname as primaryregionhealthcheckname and service token
+(this is got from the lambda server on the current region, current aws account id,and function used here are RT53HClookupCR)
+
+Line78-89---3. privateroute53zoneinfo-- same as first 2
+
+Line 90-120---4. outofregiongeolocation record-- same as  first 2 along with that name and resoucrerecord are passed these are got from default.JSON file. Add a TTL of 60 seconds, with the type is of CNAME, geolocation country code geolocationcountryout fo region and subdivisioncode and a Cname in the default country set the identifier =1
+
+Line 121-- 146---5. Defaultgeolocationrecord-- create a route53 record set if this is not a part of CI build use the parameters(privateroute53zoneinfor, zoneid) of default.json and name, defaultgeolocationrecordformultiregion from ci.suffix file with TTL=60 and a Cname in the default country set the identifier =2
+
+Line 147-- 176---6. Defaultgeolocationrecordformultiregion-- create a route53 record set if this is not a part of CI build use the parameters(privateroute53zoneinfor, zoneid) of default.json and name, defaultgeolocationrecordformultiregion from ci.suffix file with TTL=60,a Cname, outofregionfailovertoggle and healthcheckID with the identifier is set to=1
+
+Line 177--200--- 7. Defaultgeolocationrecordforoutofregion-- create a route53 record set if this is not a part of CI build use the hostedzoneid parameters(privateroute53zoneinfo, zoneid) of default.json and name, defaultgeolocationrecordformultiregion as domainnameoutofregion from default.json file with TTL=60,a Cname, failover as secondary with the identifier is set to=2
+
+Line 201--230---8 primarymultiregionrecord-- type is route53 recordset, if condition is not in the Cibuild then have the hostedzoneID values set to privateroute53zoneinfo and zone id from default.json, Use name= multiregion+cisuffix+domainnameclientfacing resoucerecords from domainnameprimaryregion from default.json
+Ttl=60,type=cname,failover=primary,healthcheckid=multiregion+cisuffix+domainnameclientfacing, resourcerecords=domainnameprimaryregion, TTl=60,type=cname,failover=primary, healthcheckid=(primaryregionhealthcheck,healthcheckID), setidentifier=1
+
+Line 231--254--9 secondarymultiregionrecord-- type is route53 recordset, if condition is not in the Cibuild then have the hostedzoneID values set to privateroute53zoneinfo and zone id from default.json, Use name= primarymultiregionrecords, resoucerecords=domainnamesecondaryregion from default.json with TTL=60. type as cname and failover=secondary with setidentifier=2
+
+Template-us-west1
+Line 1-45-- specify the datatypes
+Line 46--66-- a resouce primaryregionhealthcheckalarm with type of cloudwatch and alarm description-deadmanswitch
+And alarmname-primaryregionhealthcehckname+cisuffix
+A namespace is named custom/vghealthchecks with metric value =primaryregionhelthcheckname+cisuffix statistic value=minimum, period=60 sec, evalution periods=1,unit=none,threshold=0, comarisonoperator= lessthanor equal to threshold and treat missingdata= ignore
+Line 67--91-- a resouce primaryregionhealth with type of route53 healthcheck with properties of healthcheckconfig
+Is equal to type=cloudwatch_metric
